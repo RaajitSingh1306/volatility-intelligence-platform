@@ -1,6 +1,6 @@
 # Volatility Intelligence Platform — Nifty 50
 
-> Predicts next-day volatility regime (Low/Mid/High) for Nifty 50 using GARCH(1,1) → 3-state HMM → XGBoost. OOF macro-AUC 0.754, regime Sharpe 0.917 vs B&H 0.884, with +15.1% max drawdown capital protection. docker compose up → pytest → Railway API → Vercel UI.
+> Predicts next-day volatility regime (Low/Mid/High) for Nifty 50 using GARCH(1,1) → 3-state HMM → XGBoost. OOF macro-AUC 0.745, regime Sharpe 0.968 vs B&H 0.873, with +12.5% max drawdown capital protection. docker compose up → pytest → Railway API → Vercel UI.
 
 ---
 
@@ -38,15 +38,15 @@
 │   Walk-Forward CV: TimeSeriesSplit(n_splits=5, gap=5)           │
 │   Target: Tomorrow's regime from today's 15 features            │
 │   TreeExplainer SHAP → outputs/shap_summary_xgb.png             │
-│   Bundle → models/xgb_bundle.pkl (OOF macro-AUC: 0.7540)        │
+│   Bundle → models/xgb_bundle.pkl (OOF macro-AUC: 0.7453)        │
 └──────────────────────────────┬──────────────────────────────────┘
                                │
                 ┌──────────────┴──────────────┐
                 ▼                             ▼
 ┌──────────────────────┐   ┌──────────────────────────────────────┐
 │   MLflow Tracking    │   │         vectorbt Backtest            │
-│   mlruns/ (3 sweeps) │   │   Sharpe: 0.917 vs 0.884 B&H         │
-│   Params, metrics    │   │   Max DD: -23.34% vs -38.44% B&H     │
+│   mlruns/ (3 sweeps) │   │   Sharpe: 0.968 vs 0.873 B&H         │
+│   Params, metrics    │   │   Max DD: -25.92% vs -38.44% B&H     │
 └──────────────────────┘   └──────────────────┬───────────────────┘
                                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -63,21 +63,21 @@
 
 | Metric | Measured Value | Benchmark Bar |
 |---|---|---|
-| **OOF Macro-AUC** | **0.7540** | > 0.70 Target |
-| Fold 1 AUC | 0.9328 | - |
-| Fold 2 AUC | 0.8745 | - |
-| Fold 3 AUC | 0.9788 | - |
-| Fold 4 AUC | 0.9862 | - |
-| Fold 5 AUC | 0.9787 | - |
-| Optimal Config | `n_estimators=300`, `max_depth=4`, `lr=0.05` | - |
+| **OOF Macro-AUC** | **0.7453** | > 0.70 Target |
+| Fold 1 AUC | 0.5000 | - |
+| Fold 2 AUC | 0.9094 | - |
+| Fold 3 AUC | 0.9844 | - |
+| Fold 4 AUC | 0.5000 | - |
+| Fold 5 AUC | 0.8584 | - |
+| Optimal Config | `n_estimators=500`, `max_depth=4`, `lr=0.05` | - |
 
 ### Backtest (2014 – Present, Nifty 50, Rf = 6.5%)
 
 | Strategy | Sharpe Ratio | Max Drawdown | Total Return | CAGR | Calmar |
 |---|---|---|---|---|---|
-| **Regime-Switching Strategy** | **0.917** | **-23.34%** | **+226.09%** | 15.19% | **0.651** |
-| **Buy & Hold (Nifty 50)** | 0.884 | -38.44% | +255.18% | 16.37% | 0.426 |
-| **Alpha / Protection** | **+0.033** | **+15.10% Protected** | Lower Volatility | Parity | **+0.225** |
+| **Regime-Switching Strategy** | **0.968** | **-25.92%** | **+262.01%** | 16.61% | **0.641** |
+| **Buy & Hold (Nifty 50)** | 0.873 | -38.44% | +249.48% | 16.13% | 0.419 |
+| **Alpha / Protection** | **+0.095** | **+12.52% Protected** | Outperforming (+12.53%) | +0.48% | **+0.222** |
 
 ---
 
@@ -214,7 +214,7 @@ volatility-intelligence-platform/
 
 - [x] `docker-compose.yml` & `Dockerfile` configured and ready
 - [x] `pytest tests/ -v` → 24 passed in 17.4s
-- [x] `results/metrics.json` → OOF macro-AUC (0.7540), Sharpe (0.917), Max DD (-23.3%)
+- [x] `results/metrics.json` → OOF macro-AUC (0.7453), Sharpe (0.968), Max DD (-25.92%)
 - [x] `mlflow ui` → 3 runs logged across n_estimators = 200, 300, 500
 - [x] `models/xgb_bundle.pkl` → 5 fold models saved, OOF AUC > 0.65
 - [x] `GET /predict` → returns 3 probabilities summing to 1.0 + predicted regime
