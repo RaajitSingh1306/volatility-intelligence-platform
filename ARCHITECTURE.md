@@ -69,7 +69,7 @@ Comprehensive architectural blueprint, mathematical foundations, model chaining,
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Serving Layer                           │
 │                                                                 │
-│   FastAPI Engine (Railway / Docker)  Next.js UI (Vercel)        │
+│   FastAPI Engine (Render / Docker)   Next.js UI (Vercel)        │
 │   app/main.py                        frontend/pages/index.tsx   │
 │   - GET /current                     - Real-time KPI cards      │
 │   - GET /regimes?last_n=252          - Predicted Regime Prob    │
