@@ -1,5 +1,11 @@
 # Volatility Intelligence Platform — Nifty 50
 
+> [!NOTE]
+> **FINAL SHIPPED PRODUCTION VERSION**  
+> This system is the **final, shipped production version** of the Volatility Regime classification platform. It officially **supersedes** both earlier developmental iterations:
+> - **[Volatility Regime Classifier (v1 Prototype)](https://github.com/RaajitSingh1306/Volatility-Regime-Classifier)** (dual-asset prototype)
+> - **[Volatility Classifier Simplified (v2 Refactor)](https://github.com/RaajitSingh1306/volatility-classifier-simplified)** (single-asset modular refactor)
+
 [![CI Tests](https://img.shields.io/badge/tests-24%2F24%20passed-brightgreen)](#testing)
 [![OOF Macro-AUC](https://img.shields.io/badge/OOF%20Macro--AUC-0.7453-blue)](#predictive-model-xgboost-walk-forward-cv)
 [![Sharpe Ratio](https://img.shields.io/badge/Sharpe-0.968%20vs%200.873%20B%26H-emerald)](#backtest-performance-2014--present-nifty-50)
@@ -123,17 +129,25 @@ Institutional quant funds deploy sophisticated volatility-modeling engines to dy
 | **Docker build-time training** | Baked models inside image | Container starts instantaneously on deployment with zero runtime model training dependencies. |
 | **Return scaling** | `returns * 100` before GARCH | Well-conditioned maximum likelihood estimation. Raw returns produce variances near machine epsilon. |
 
-### How This Differs From the Simplified Version
+### Evolution & Supersession Lineage
 
-| Dimension | Volatility Classifier (Simplified) | Volatility Intelligence Platform (This Repo) |
-|---|---|---|
-| **Regime classification** | HMM only (retrospective) | HMM + Forward-looking XGBoost ensemble |
-| **Next-day prediction** | ❌ None | ✅ `/predict` (probability distribution + AUC) |
-| **Experiment tracking** | ❌ None | ✅ MLflow (`mlflow.db` with 3 logged parameter sweeps) |
-| **Dashboard** | Streamlit (Python) | Next.js 14 + Tailwind CSS (production dark-theme UI) |
-| **API Endpoints** | 5 endpoints | 7 endpoints (adds `/predict` and `/market-summary`) |
-| **CI Test Suite** | 12 tests | 24 tests |
-| **Deployment** | Python runtime | Multi-stage Docker container |
+This platform is the culmination of three developmental generations:
+
+| Dimension | v1: Volatility Classifier (Prototype) | v2: Volatility Classifier Simplified | v3: Volatility Intelligence Platform (Final Shipped Version) |
+|---|---|---|---|
+| **Scope** | Nifty 50 + Bank Nifty | Nifty 50 single-asset | Nifty 50 full production platform |
+| **Features** | 3 engineered volatility features | 15 volatility & momentum features | 15 standardized econometrics & technical features |
+| **Model Architecture** | Gaussian HMM + GARCH(1,1) | Gaussian HMM + GARCH(1,1) | **HMM unsupervised clustering + 5-fold XGBoost forward-looking ensemble** |
+| **Prediction Horizon** | Current day classification only | Current day classification only | **Day $T \rightarrow Day T+1$ predictive probability distribution** |
+| **Model Evaluation** | Descriptive confusion matrix | Basic backtest metrics | **Walk-forward CV with 5-day gap (OOF Macro-AUC: 0.7453)** |
+| **Explainability** | Kernel SHAP ($O(2^N)$ approximation) | Gradient Boosting surrogate SHAP | **TreeExplainer exact Shapley attribution ($O(TLD^2)$ polynomial)** |
+| **Experiment Tracking** | None | None | **MLflow integration (`mlflow.db` SQLite tracking 3 sweeps)** |
+| **Backtesting Engine** | Custom pandas script | vectorbt backtest | **vectorbt realistic backtest (1-day execution lag, 0.1% fees, 0.1% slippage)** |
+| **Serving API** | FastAPI (4 endpoints) | FastAPI (5 endpoints) | **FastAPI (7 endpoints with `@lru_cache`, <10ms response time)** |
+| **Frontend UI** | Streamlit | Streamlit | **Institutional Next.js 14 + Tailwind CSS Dark UI** |
+| **Test Coverage** | Manual | 12 Pytest unit tests | **24 Automated CI tests (data, features, GARCH, HMM, backtest, API)** |
+| **Containerization** | None | Basic Dockerfile | **Multi-stage Dockerfile with bake-time model serialization** |
+| **Status** | *Superseded* | *Superseded* | **Active Flagship Shipped Platform** |
 
 ---
 
@@ -627,13 +641,20 @@ services:
 
 ### Connected Projects
 
-This platform serves as the quantitative foundation for a broader financial intelligence ecosystem:
+This platform serves as the flagship quantitative foundation for an interconnected quantitative finance and engineering ecosystem:
 
-| Project | Role | Repository |
+| Project | Domain / Role | GitHub Repository |
 |---|---|---|
-| **Volatility Intelligence Platform** (This Repo) | GARCH + HMM + XGBoost prediction engine and API | [volatility-intelligence-platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform) |
-| **Volatility Classifier (Simplified)** | Minimal, self-contained HMM-only reference version | [volatility-classifier-simplified](https://github.com/RaajitSingh1306/volatility-classifier-simplified) |
-| **SEBI RAG Bot** | Compliance assistant consuming this API via `quant_agent` | [sebi-rag-bot](https://github.com/RaajitSingh1306/sebi-rag-bot) |
+| **Volatility Intelligence Platform** (This Repo) | Flagship GARCH + HMM + XGBoost production prediction platform | [volatility-intelligence-platform](https://github.com/RaajitSingh1306/volatility-intelligence-platform) |
+| **SEBI RAG Bot** | Multi-agent compliance assistant consuming this volatility API | [sebi-rag-bot](https://github.com/RaajitSingh1306/sebi-rag-bot) |
+| **NSEI Daily Stock Pipeline** | Lakehouse & ML feature store materializing rolling metrics | [NSEI-Daily-Stock-Pipeline](https://github.com/RaajitSingh1306/NSEI-Daily-Stock-Pipeline) |
+| **Nifty Sector Rotation** | Momentum strategy utilizing dynamic regime volatility filters | [Nifty-Sector-Rotation](https://github.com/RaajitSingh1306/Nifty-Sector-Rotation) |
+| **Nifty Time Series** | Empirical research proving daily return unpredictability (EMH baseline) | [Nifty-Time-Series](https://github.com/RaajitSingh1306/Nifty-Time-Series) |
+| **Credit Default Predictor** | Loan default prediction with TreeSHAP feature attribution | [Credit-Default-Predictor](https://github.com/RaajitSingh1306/Credit-Default-Predictor) |
+| **Global Market HeatMap** | Cross-border 35-stock risk-return analytics & dashboard | [marketheatmap](https://github.com/RaajitSingh1306/marketheatmap) |
+| **Finance KPI** | Automated portfolio performance & drawdown diagnostics | [Finance_Kpi](https://github.com/RaajitSingh1306/Finance_Kpi) |
+| **Volatility Classifier (Simplified)** | *Superseded (v2)*: Single-asset 15-feature GARCH + HMM refactor | [volatility-classifier-simplified](https://github.com/RaajitSingh1306/volatility-classifier-simplified) |
+| **Volatility Regime Classifier** | *Superseded (v1)*: Dual-asset 3-feature HMM prototype | [Volatility-Regime-Classifier](https://github.com/RaajitSingh1306/Volatility-Regime-Classifier) |
 
 ---
 
