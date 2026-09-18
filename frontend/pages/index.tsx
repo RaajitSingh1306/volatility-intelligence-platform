@@ -82,23 +82,41 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<string>("");
+  const [apiUrl, setApiUrl] = useState<string>(
+    process.env.NEXT_PUBLIC_API_URL || "https://volatility-intelligence-platform.onrender.com"
+  );
 
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const resolveApiUrl = () => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    if (typeof window !== "undefined") {
+      const isLocal =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1";
+      return isLocal
+        ? "http://localhost:8000"
+        : "https://volatility-intelligence-platform.onrender.com";
+    }
+    return "https://volatility-intelligence-platform.onrender.com";
+  };
 
-  const fetchData = async () => {
+  const fetchData = async (attempt = 1, maxAttempts = 4) => {
     setLoading(true);
-    setError(null);
+    const targetApi = resolveApiUrl();
+    setApiUrl(targetApi);
+
     try {
       const [sumRes, predRes, histRes] = await Promise.all([
-        fetch(`${API}/market-summary`).then((r) => {
-          if (!r.ok) throw new Error("Failed to load market summary");
+        fetch(`${targetApi}/market-summary`).then((r) => {
+          if (!r.ok) throw new Error(`Status ${r.status}: Failed to load market summary`);
           return r.json();
         }),
-        fetch(`${API}/predict`).then((r) => {
-          if (!r.ok) throw new Error("Failed to load prediction");
+        fetch(`${targetApi}/predict`).then((r) => {
+          if (!r.ok) throw new Error(`Status ${r.status}: Failed to load prediction`);
           return r.json();
         }),
-        fetch(`${API}/regimes?last_n=8`).then((r) => {
+        fetch(`${targetApi}/regimes?last_n=8`).then((r) => {
           if (!r.ok) return [];
           return r.json();
         }),
@@ -107,13 +125,23 @@ export default function Home() {
       setSummary(sumRes);
       setPredict(predRes);
       setHistory(histRes);
+      setError(null);
       setLastRefreshed(new Date().toLocaleTimeString());
-    } catch (err: any) {
-      console.warn("API offline or loading error, fallback values active:", err);
-      setError("Backend API is currently offline. Showing cached benchmark telemetry.");
-      setLastRefreshed(new Date().toLocaleTimeString());
-    } finally {
       setLoading(false);
+    } catch (err: any) {
+      console.warn(`API attempt ${attempt}/${maxAttempts} failed:`, err);
+      if (attempt < maxAttempts) {
+        setError(
+          `Render free tier is spinning up (cold start). Retrying connection (attempt ${attempt + 1}/${maxAttempts} in 4s)...`
+        );
+        setTimeout(() => {
+          fetchData(attempt + 1, maxAttempts);
+        }, 4000);
+      } else {
+        setError("Backend API is currently offline. Showing cached benchmark telemetry.");
+        setLastRefreshed(new Date().toLocaleTimeString());
+        setLoading(false);
+      }
     }
   };
 
@@ -186,10 +214,10 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              API: <span className="text-slate-200 font-mono">{API}</span>
+              API: <span className="text-slate-200 font-mono">{apiUrl}</span>
             </div>
             <button
-              onClick={fetchData}
+              onClick={() => fetchData(1, 4)}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 active:scale-95 border border-slate-700 text-xs font-medium text-slate-200 transition"
               title="Refresh telemetry"
@@ -208,7 +236,7 @@ export default function Home() {
           <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span>{error} Backend is either starting up or unreachable. Displaying baseline validated telemetry.</span>
+              <span>{error}</span>
             </div>
             <span className="text-xs text-amber-400/80 font-mono">Last updated: {lastRefreshed}</span>
           </div>
