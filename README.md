@@ -651,7 +651,7 @@ This platform serves as the flagship quantitative foundation for an interconnect
 | **Nifty Sector Rotation** | Momentum strategy utilizing dynamic regime volatility filters | [Nifty-Sector-Rotation](https://github.com/RaajitSingh1306/Nifty-Sector-Rotation) |
 | **Nifty Time Series** | Empirical research proving daily return unpredictability (EMH baseline) | [Nifty-Time-Series](https://github.com/RaajitSingh1306/Nifty-Time-Series) |
 | **Credit Default Predictor** | Loan default prediction with TreeSHAP feature attribution | [Credit-Default-Predictor](https://github.com/RaajitSingh1306/Credit-Default-Predictor) |
-| **Global Market HeatMap** | Cross-border 35-stock risk-return analytics & dashboard | [marketheatmap](https://github.com/RaajitSingh1306/marketheatmap) |
+| **Global Market HeatMap** | Cross-border 35-stock risk-return analytics & dashboard | [Global-Equity-Market-Dashboard](https://github.com/RaajitSingh1306/Global-Equity-Market-Dashboard) |
 | **Finance KPI** | Automated portfolio performance & drawdown diagnostics | [Finance_Kpi](https://github.com/RaajitSingh1306/Finance_Kpi) |
 | **Volatility Classifier (Simplified)** | *Superseded (v2)*: Single-asset 15-feature GARCH + HMM refactor | [volatility-classifier-simplified](https://github.com/RaajitSingh1306/volatility-classifier-simplified) |
 | **Volatility Regime Classifier** | *Superseded (v1)*: Dual-asset 3-feature HMM prototype | [Volatility-Regime-Classifier](https://github.com/RaajitSingh1306/Volatility-Regime-Classifier) |
