@@ -658,6 +658,27 @@ This platform serves as the flagship quantitative foundation for an interconnect
 
 ---
 
+## Limitations & Roadmap
+
+### Known Limitations
+- **Hardcoded HMM Regimes**: The model fixes the hidden state count at $K=3$ (Low, Medium, High). It does not dynamically calibrate state count via BIC/AIC criterion sweeps during market transitions.
+- **Symmetric Volatility Clustering**: Relies on standard GARCH(1,1) with a normal distribution, ignoring asymmetric leverage effects (where negative shocks generate higher volatility than equivalent positive shocks) modeled by EGARCH or GJR-GARCH.
+- **Static Ingestion & Caching**: Data ingestion relies on yfinance with a 7-day TTL file cache (`data.py`) rather than low-latency real-time tick/websocket streaming feeds.
+- **No Online Learning**: The XGBoost ensemble uses 5-fold cross-validated bagging; it requires batch retraining rather than incremental/online continuous learning.
+- **Simplified Transaction Cost Model**: The backtesting module applies flat 0.10% round-trip trading friction, omitting exchange turnover charges, Securities Transaction Tax (STT) slabs, slippage distributions, or market impact at institutional scale.
+- **Walk-Forward Regime Dominance**: In walk-forward splits dominated by a single regime (e.g. Folds 1 and 4), direction accuracy degraded to random-chance (~0.5000), highlighting the need for fold-specific dynamic thresholding.
+- **Cloud Free-Tier Cold Starts**: Deployment on Render free tier introduces a 30–60 second container spin-up latency on initial invocation.
+
+### Roadmap
+- [ ] **Asymmetric Volatility Modeling**: Implement EGARCH(1,1) and GJR-GARCH with Student's $t$ innovations to capture heavy tails and leverage asymmetry.
+- [ ] **Automated Retraining Loop**: Connect directly to upstream triggers from `NSEI Daily Stock Pipeline` for automated daily/weekly retraining and MLflow model registry updates.
+- [ ] **Fold-Aware Adaptive Thresholding**: Implement dynamic probability thresholds per regime to stabilize walk-forward classification on imbalanced folds.
+- [ ] **Multi-Asset Expansion**: Extend the multi-step regime and volatility forecasting architecture to Bank Nifty (`^NSEBANK`) and global benchmarks (S&P 500, Nasdaq 100).
+- [ ] **Real-Time Notification Engine**: Add Slack and Telegram webhook alerts triggered upon high-volatility regime state transitions.
+
+---
+
 ### License & Disclaimer
 
 MIT License. This project is developed strictly for **educational and scientific research purposes** and does not constitute financial, investment, or trading advice. Past performance under backtested simulation is not indicative of future returns.
+
