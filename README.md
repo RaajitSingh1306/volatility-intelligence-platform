@@ -51,6 +51,7 @@
    - [Evaluation & Benchmarks](#evaluation--benchmarks)
    - [Deployment](#deployment)
    - [Connected Projects](#connected-projects)
+   - [Limitations & Roadmap](#limitations--roadmap)
    - [License & Disclaimer](#license--disclaimer)
 
 ---
@@ -678,7 +679,7 @@ This platform serves as the flagship quantitative foundation for an interconnect
 
 ---
 
-### License & Disclaimer
+## License & Disclaimer
 
 MIT License. This project is developed strictly for **educational and scientific research purposes** and does not constitute financial, investment, or trading advice. Past performance under backtested simulation is not indicative of future returns.
 
