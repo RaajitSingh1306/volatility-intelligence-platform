@@ -1,0 +1,20 @@
+{
+  "oof_macro_auc": 0.7453,
+  "fold_aucs": [
+    0.5,
+    0.9094,
+    0.9844,
+    0.5,
+    0.8584
+  ],
+  "regime_dist": {
+    "Low": 0.9725,
+    "Mid": 0.0187,
+    "High": 0.0088
+  },
+  "sharpe_strategy": 0.968,
+  "sharpe_bh": 0.873,
+  "max_dd_strategy": -0.259,
+  "max_dd_bh": -0.384,
+  "best_n_estimators": 500
+}

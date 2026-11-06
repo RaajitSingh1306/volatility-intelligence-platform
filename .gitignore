@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Data (uncomment if using DVC or external storage)
+# data/nifty_ohlcv.csv
+# data/labeled_data.csv
+# data/backtest_summary.csv
+
+# Outputs (generated artefacts)
+outputs/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+!research/*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.*
+.env.local
+
+# Coverage / test caches
+.coverage
+.pytest_cache/
+htmlcov/
+
+# MLflow
+mlruns/
+mlflow.db
+*.db
+*.sqlite
+
+# Models (generated)
+models/*.pkl
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
