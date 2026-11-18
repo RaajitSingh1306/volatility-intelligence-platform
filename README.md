@@ -257,6 +257,7 @@ Source: `results/metrics.json`. Each validation fold has 509 rows. Fold AUC is t
 
 - Only 24 Mid and 27 High days exist in the validation windows, so every AUC rests on very few positive days. High appears only in fold 2.
 - 0.6515 is the best of three sweep settings (`n_estimators` 200 / 300 / 500 gave 0.6515 / 0.6100 / 0.5958), so it is mildly optimistic.
+- **Platform dependence**: the fold table and the 0.6515 come from a Windows run. The same code and data on Linux (the Docker build that Render serves) give pooled OOF AUC 0.699 and a different top-SHAP order (`vol_ratio_21_63` first on Linux, `gk_vol_21` first on Windows). The live dashboard therefore shows 0.699. The seed is fixed (`random_state=42 + fold`), the cause is not investigated, and both values are below the 0.9455 baseline.
 - The mean of the five fold AUCs is 0.7362, but it includes two placeholders and is not used as the headline.
 - **Baseline**: predicting tomorrow's regime = today's regime scores 0.9455 pooled macro-AUC on the same 2,545 rows (the regime changes on only 9 of them). The XGBoost layer does not beat it. Saved as `persistence_baseline_auc` in `results/metrics.json`.
 
@@ -428,6 +429,7 @@ npm run dev
 The platform is deployed as a Docker Web Service on Render using `render.yaml`:
 - Build: `docker build` runs `run.py` and `scripts/regime_classifier.py --n_estimators 200`, so trained models are baked into the image. Not verified by me; CI runs the same two commands.
 - Startup: `uvicorn app.main:app`; data and models load on the first request, then stay cached in memory with `@lru_cache`.
+- **Deploys are manual**: a push to GitHub does not redeploy Render for this service. After each push, open the Render dashboard and run Manual Deploy > Deploy latest commit (the Docker build trains the models, so it takes a few minutes). Vercel redeploys on every push, so deploy Render too, or the frontend will talk to an older API.
 
 ### Vercel Frontend Deployment
 
@@ -454,6 +456,7 @@ The Next.js frontend is deployed on Vercel:
 - **Look-ahead in labels**: the HMM is fit and decoded (Viterbi) on the full sample, so the label on day t uses later data. Backtest signals and XGBoost targets inherit this.
 - **Predictive layer does not beat persistence**: pooled OOF Macro-AUC 0.6515 against 0.9455 for "tomorrow = today".
 - **Undefined folds**: folds 1 and 4 have only Low days in validation, so their AUC cannot be computed.
+- **Results differ by platform**: the same seeded code gives AUC 0.6515 on Windows and 0.699 on Linux (Section 8). Reported numbers name the platform they came from.
 - **Labels are not volatility bands**: GARCH vol overlaps across labels (Low 8.7-47.9%, Mid 9.2-45.3%, High 47.4-92.0%), so a Mid Vol day can have the same GARCH vol as a Low day. The HMM clusters all 15 features, not volatility alone.
 - **Backtest**: 2 trades in 12 years; lower return and Sharpe than buy-and-hold, 4.75 points less max drawdown.
 - **Free-Tier Cold Starts**: Render free-tier instances sleep after 15 minutes of inactivity; the frontend includes polling retry logic to handle 50-second wakeups gracefully.
