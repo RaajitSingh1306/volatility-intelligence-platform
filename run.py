@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 Path("data").mkdir(exist_ok=True)
 Path("outputs").mkdir(exist_ok=True)
 
+START = "2014-01-01"
+END = "2026-09-12"  # yfinance end is exclusive
+
 
 def main() -> None:
     logger.info("=" * 55)
@@ -32,7 +35,7 @@ def main() -> None:
     # ── 1. Data ──────────────────────────────────────────────────────────────
     logger.info("[1/5] Fetching Nifty 50 data...")
     from data import fetch_nifty
-    df = fetch_nifty()
+    df = fetch_nifty(start=START, end=END, cache=False)
 
     # ── 2. Features ──────────────────────────────────────────────────────────
     logger.info("[2/5] Engineering features...")
@@ -62,6 +65,29 @@ def main() -> None:
     from backtest import run_backtest
     summary, pf = run_backtest(df)
     summary.to_csv("data/backtest_summary.csv")
+    import json, platform
+    from importlib.metadata import version
+    env = {"python": platform.python_version()}
+    for k in ["yfinance", "pandas", "numpy", "arch", "hmmlearn",
+              "scikit-learn", "shap", "vectorbt", "xgboost"]:
+        try:
+            env[k] = version(k)
+        except Exception:
+            env[k] = "n/a"
+    Path("results").mkdir(exist_ok=True)
+    results = {
+        "data": {
+            "requested_start": START, "requested_end": END,
+            "first_row": str(df.index[0].date()),
+            "last_row": str(df.index[-1].date()),
+            "rows": int(len(df)),
+        },
+        "regime_days": {str(k): int(v) for k, v in df["regime"].value_counts().sort_index().items()},
+        "backtest": summary.to_dict(orient="index"),
+        "env": env,
+    }
+    with open("results/results.json", "w") as f:
+        json.dump(results, f, indent=2, default=str)
     logger.info("Backtest summary saved → data/backtest_summary.csv")
 
     logger.info("=" * 55)

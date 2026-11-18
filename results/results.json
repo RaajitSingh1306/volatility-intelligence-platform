@@ -1,0 +1,46 @@
+{
+  "data": {
+    "requested_start": "2014-01-01",
+    "requested_end": "2026-09-12",
+    "first_row": "2014-04-07",
+    "last_row": "2026-09-11",
+    "rows": 3055
+  },
+  "regime_days": {
+    "0": 2971,
+    "1": 57,
+    "2": 27
+  },
+  "backtest": {
+    "Strategy": {
+      "Total Return (%)": 219.23,
+      "CAGR (%)": 9.79,
+      "Sharpe Ratio": 0.269,
+      "Max Drawdown (%)": -33.69,
+      "Calmar Ratio": 0.291,
+      "Win Rate (%)": 100.0,
+      "Num Trades": 2.0
+    },
+    "Buy & Hold": {
+      "Total Return (%)": 249.48,
+      "CAGR (%)": 10.59,
+      "Sharpe Ratio": 0.305,
+      "Max Drawdown (%)": -38.44,
+      "Calmar Ratio": 0.276,
+      "Win Rate (%)": 100.0,
+      "Num Trades": 1.0
+    }
+  },
+  "env": {
+    "python": "3.12.10",
+    "yfinance": "1.2.0",
+    "pandas": "3.0.5",
+    "numpy": "2.5.3",
+    "arch": "8.0.0",
+    "hmmlearn": "0.3.3",
+    "scikit-learn": "1.9.0",
+    "shap": "0.52.0",
+    "vectorbt": "1.1.0",
+    "xgboost": "3.3.0"
+  }
+}

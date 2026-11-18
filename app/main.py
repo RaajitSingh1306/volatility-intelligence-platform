@@ -130,10 +130,14 @@ class MarketSummaryResponse(BaseModel):
     current_regime: str
     garch_vol_current: float
     nifty_close: float
-    backtest_sharpe: float
-    backtest_max_dd: float
-    model_auc: float
+    backtest_sharpe: Optional[float] = None
+    backtest_max_dd: Optional[float] = None
+    backtest_sharpe_bh: Optional[float] = None
+    backtest_max_dd_bh: Optional[float] = None
+    model_auc: Optional[float] = None
+    persistence_baseline_auc: Optional[float] = None
     data_end_date: str
+    top_shap: List[Dict[str, Any]] = []
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -247,34 +251,36 @@ def market_summary() -> MarketSummaryResponse:
     row = df.iloc[-1]
     date_str = str(df.index[-1].date()) if hasattr(df.index[-1], "date") else str(df.index[-1])
 
-    # Default fallbacks
-    sharpe_strategy = 0.917
-    max_dd_strategy = -0.233
-    model_auc = 0.754
-
-    # Load from metrics.json if present
+    # No invented fallbacks: if results/metrics.json is missing the fields stay None
+    metrics_data: Dict[str, Any] = {}
     if METRICS_PATH.exists():
         try:
             with open(METRICS_PATH, "r") as f:
                 metrics_data = json.load(f)
-            sharpe_strategy = float(metrics_data.get("sharpe_strategy", sharpe_strategy))
-            max_dd_strategy = float(metrics_data.get("max_dd_strategy", max_dd_strategy))
-            model_auc = float(metrics_data.get("oof_macro_auc", model_auc))
         except Exception:
-            pass
-    elif XGB_BUNDLE_PATH.exists():
+            metrics_data = {}
+
+    def _m(key: str, nd: int) -> Optional[float]:
+        v = metrics_data.get(key)
+        return None if v is None else round(float(v), nd)
+
+    model_auc = _m("oof_macro_auc", 4)
+    if model_auc is None and XGB_BUNDLE_PATH.exists():
         try:
-            bundle = _get_xgb()
-            model_auc = float(bundle.get("oof_auc", model_auc))
+            model_auc = round(float(_get_xgb().get("oof_auc")), 4)
         except Exception:
-            pass
+            model_auc = None
 
     return MarketSummaryResponse(
         current_regime=str(row["regime_name"]),
         garch_vol_current=round(float(row["garch_vol"]) * 100, 2),
         nifty_close=round(float(row["Close"]), 2),
-        backtest_sharpe=round(sharpe_strategy, 3),
-        backtest_max_dd=round(max_dd_strategy, 3),
-        model_auc=round(model_auc, 4),
+        backtest_sharpe=_m("sharpe_strategy", 3),
+        backtest_max_dd=_m("max_dd_strategy", 4),
+        backtest_sharpe_bh=_m("sharpe_bh", 3),
+        backtest_max_dd_bh=_m("max_dd_bh", 4),
+        model_auc=model_auc,
+        persistence_baseline_auc=_m("persistence_baseline_auc", 4),
         data_end_date=date_str,
+        top_shap=metrics_data.get("top_shap", []),
     )

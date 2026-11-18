@@ -1,16 +1,14 @@
 # Research
 
-Academic and empirical underpinning for the Volatility Intelligence Platform.
+One notebook that motivates modelling volatility instead of returns.
 
-## Contents
+## 01_arima_null_result.ipynb
 
-1. **`01_arima_null_result.ipynb` — The Return Unpredictability Baseline**
-   - Implements Augmented Dickey-Fuller (ADF) tests establishing non-stationarity of Nifty 50 price levels (p = 0.94) and stationarity of log returns (p < 0.001).
-   - Fits ARIMA(1,0,1) models to daily returns: AR(1) and MA(1) coefficients are statistically insignificant (p > 0.05).
-   - Confirms the Efficient Market Hypothesis (EMH) / near-random walk at the daily horizon.
-   - **Theoretical conclusion**: Predicting price directions is near impossible on daily horizons; however, volatility exhibits clustering (the ARCH effect), motivating volatility regime modeling.
+- Augmented Dickey-Fuller test on Nifty 50 price levels and on log returns.
+- ARIMA(1,0,1) on daily log returns, to check whether the AR and MA terms are significant.
+- Engle ARCH-LM test and ACF of squared returns, to check for volatility clustering.
+- Reads `../data/nifty_ohlcv.csv`. Statistics are in the saved cell outputs of the notebook, not copied here.
+- It tests this one series only. It does not show that returns are unpredictable in general.
 
-2. **`02_sector_momentum_preview.ipynb` — Cross-Sectional Momentum Signals**
-   - Composite momentum ranking across 10 major Nifty sector indices (Auto, Bank, FMCG, IT, Metal, Pharma, PSU Bank, Realty, Financial Services, Energy).
-   - Demonstrates that while time-series returns of broad market indices are near-random walk, cross-sectional relative strength momentum persists across sectors.
-   - Serves as the natural companion piece for sector rotation allocation under varying volatility regimes.
+A second notebook on sector momentum was removed: its table was generated with `np.random.normal`, not market data.
+Sector momentum lives in the separate Nifty Sector Rotation repository.

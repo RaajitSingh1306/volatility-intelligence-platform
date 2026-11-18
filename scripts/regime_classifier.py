@@ -90,13 +90,19 @@ def train_regime_classifier(
     tscv = TimeSeriesSplit(n_splits=5, gap=5)
     models: List[XGBClassifier] = []
     fold_aucs: List[float] = []
+    fold_info: List[dict] = []
     oof_preds_list: List[np.ndarray] = []
     oof_y_list: List[np.ndarray] = []
+    oof_today_list: List[np.ndarray] = []
 
     logger.info("Starting walk-forward CV (5 splits, gap=5, n_estimators=%d)...", n_estimators)
 
     for fold, (train_idx, val_idx) in enumerate(tscv.split(X), 1):
-        X_tr, y_tr = X.iloc[train_idx], y[train_idx]
+        # early stopping uses the END of the training window, never the validation fold
+        cut = int(len(train_idx) * 0.85)
+        fit_idx, es_idx = train_idx[: cut - 5], train_idx[cut:]
+        X_tr, y_tr = X.iloc[fit_idx], y[fit_idx]
+        X_es, y_es = X.iloc[es_idx], y[es_idx]
         X_va, y_va = X.iloc[val_idx], y[val_idx]
 
         clf = XGBClassifier(
@@ -115,13 +121,14 @@ def train_regime_classifier(
         clf.fit(
             X_tr,
             y_tr,
-            eval_set=[(X_va, y_va)],
+            eval_set=[(X_es, y_es)],
             verbose=False,
         )
 
         preds = clf.predict_proba(X_va)
         oof_preds_list.append(preds)
         oof_y_list.append(y_va.to_numpy())
+        oof_today_list.append(valid_df["regime"].astype(int).to_numpy()[val_idx])
         models.append(clf)
 
         # Compute fold AUC
@@ -132,6 +139,18 @@ def train_regime_classifier(
                 per_class_aucs.append(roc_auc_score(y_va_bin[:, c], preds[:, c]))
         fold_auc = float(np.mean(per_class_aucs)) if per_class_aucs else 0.5
         fold_aucs.append(fold_auc)
+        has_dates = "Date" in valid_df.columns
+        fold_info.append({
+            "fold": fold,
+            "n_fit": int(len(fit_idx)),
+            "n_early_stop": int(len(es_idx)),
+            "n_val": int(len(val_idx)),
+            "val_start": str(valid_df["Date"].iloc[val_idx[0]].date()) if has_dates else None,
+            "val_end": str(valid_df["Date"].iloc[val_idx[-1]].date()) if has_dates else None,
+            "val_class_counts": {int(k): int(v) for k, v in y_va.value_counts().sort_index().items()},
+            "classes_scored": len(per_class_aucs),
+            "auc": round(fold_auc, 4),
+        })
 
         best_iter = getattr(clf, "best_iteration", n_estimators)
         logger.info("Fold %d: macro-AUC=%.4f  best_iter=%s", fold, fold_auc, str(best_iter))
@@ -140,14 +159,18 @@ def train_regime_classifier(
     all_oof_preds = np.concatenate(oof_preds_list, axis=0)
     all_oof_bin = label_binarize(all_oof_y, classes=[0, 1, 2])
     oof_auc = float(roc_auc_score(all_oof_bin, all_oof_preds, multi_class="ovr", average="macro"))
+    # naive baseline: tomorrow's regime = today's regime, scored on the same pooled rows
+    all_today = np.concatenate(oof_today_list)
+    persistence_auc = float(roc_auc_score(all_oof_bin, label_binarize(all_today, classes=[0, 1, 2]), average="macro"))
 
     logger.info("── Walk-Forward Results ──")
-    logger.info("OOF macro-AUC: %.4f  (target: > 0.70)", oof_auc)
+    logger.info("OOF macro-AUC: %.4f  (persistence baseline: %.4f)", oof_auc, persistence_auc)
 
     bundle_path = MODELS_DIR / bundle_name
     shap_path = OUTPUTS_DIR / "shap_summary_xgb.png"
     metrics_path = RESULTS_DIR / "metrics.json"
 
+    top_shap: List[dict] = []
     # Generate SHAP values with TreeExplainer using last fold model on recent window
     try:
         last_model = models[-1]
@@ -164,6 +187,8 @@ def train_regime_classifier(
             mean_abs = np.mean(np.abs(shap_values), axis=0)
 
         importance_series = pd.Series(mean_abs, index=FEATURE_COLS).sort_values(ascending=True)
+        top_shap = [{"feature": k, "mean_abs_shap": round(float(v), 4)}
+                    for k, v in importance_series.sort_values(ascending=False).head(7).items()]
 
         plt.figure(figsize=(9, 6), dpi=150)
         plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
@@ -202,10 +227,7 @@ def train_regime_classifier(
     }
 
     # Extract backtest summary if present
-    sharpe_strategy = 0.917
-    sharpe_bh = 0.884
-    max_dd_strategy = -0.233
-    max_dd_bh = -0.384
+    sharpe_strategy = sharpe_bh = max_dd_strategy = max_dd_bh = None  # no invented fallbacks
 
     if BACKTEST_PATH.exists():
         try:
@@ -223,11 +245,16 @@ def train_regime_classifier(
         "oof_macro_auc": round(oof_auc, 4),
         "fold_aucs": [round(a, 4) for a in fold_aucs],
         "regime_dist": regime_dist,
-        "sharpe_strategy": round(sharpe_strategy, 3),
-        "sharpe_bh": round(sharpe_bh, 3),
-        "max_dd_strategy": round(max_dd_strategy, 3),
-        "max_dd_bh": round(max_dd_bh, 3),
+        "sharpe_strategy": None if sharpe_strategy is None else round(sharpe_strategy, 3),
+        "sharpe_bh": None if sharpe_bh is None else round(sharpe_bh, 3),
+        "max_dd_strategy": None if max_dd_strategy is None else round(max_dd_strategy, 4),
+        "max_dd_bh": None if max_dd_bh is None else round(max_dd_bh, 4),
         "best_n_estimators": n_estimators,
+        "mean_fold_auc": round(float(np.mean(fold_aucs)), 4),
+        "n_rows_used": int(len(valid_df)),
+        "folds": fold_info,
+        "persistence_baseline_auc": round(persistence_auc, 4),
+        "top_shap": top_shap,
     }
 
     with open(metrics_path, "w") as f:

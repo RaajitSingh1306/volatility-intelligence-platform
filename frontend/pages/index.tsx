@@ -18,14 +18,23 @@ import {
   Zap,
 } from "lucide-react";
 
+interface ShapItem {
+  feature: string;
+  mean_abs_shap: number;
+}
+
 interface MarketSummary {
   current_regime: string;
   garch_vol_current: number;
   nifty_close: number;
-  backtest_sharpe: number;
-  backtest_max_dd: number;
-  model_auc: number;
+  backtest_sharpe: number | null;
+  backtest_max_dd: number | null;
+  backtest_sharpe_bh: number | null;
+  backtest_max_dd_bh: number | null;
+  model_auc: number | null;
+  persistence_baseline_auc: number | null;
   data_end_date: string;
+  top_shap: ShapItem[];
 }
 
 interface PredictData {
@@ -34,7 +43,7 @@ interface PredictData {
   prob_low: number;
   prob_mid: number;
   prob_high: number;
-  model_auc: number;
+  model_auc: number | null;
 }
 
 interface RegimePoint {
@@ -47,33 +56,49 @@ interface RegimePoint {
 }
 
 const DEFAULT_SUMMARY: MarketSummary = {
-  current_regime: "Low Vol",
-  garch_vol_current: 9.16,
-  nifty_close: 23779.15,
-  backtest_sharpe: 0.917,
-  backtest_max_dd: -0.233,
-  model_auc: 0.754,
-  data_end_date: "2026-09-07",
+  current_regime: "n/a",
+  garch_vol_current: 0,
+  nifty_close: 0,
+  backtest_sharpe: null,
+  backtest_max_dd: null,
+  backtest_sharpe_bh: null,
+  backtest_max_dd_bh: null,
+  model_auc: null,
+  persistence_baseline_auc: null,
+  data_end_date: "n/a",
+  top_shap: [],
 };
 
 const DEFAULT_PREDICT: PredictData = {
   predicted_regime: 0,
-  predicted_regime_name: "Low Vol",
-  prob_low: 0.9348,
-  prob_mid: 0.0651,
-  prob_high: 0.0001,
-  model_auc: 0.754,
+  predicted_regime_name: "n/a",
+  prob_low: 0,
+  prob_mid: 0,
+  prob_high: 0,
+  model_auc: null,
 };
 
-const TOP_SHAP_FEATURES = [
-  { name: "rv_21d (21-day Realized Vol)", value: 1.236, pct: 100 },
-  { name: "gk_vol_21 (Garman-Klass Vol)", value: 0.484, pct: 39 },
-  { name: "drawdown (Rolling Drawdown)", value: 0.426, pct: 34 },
-  { name: "rv_63d (63-day Realized Vol)", value: 0.409, pct: 33 },
-  { name: "park_vol_21 (Parkinson Vol)", value: 0.320, pct: 26 },
-  { name: "rv_10d (10-day Realized Vol)", value: 0.294, pct: 24 },
-  { name: "mom_63d (3-Month Momentum)", value: 0.293, pct: 24 },
-];
+// Display names only. Every number on this page comes from the API.
+const FEATURE_LABELS: Record<string, string> = {
+  rv_5d: "rv_5d (5-day Realized Vol)",
+  rv_10d: "rv_10d (10-day Realized Vol)",
+  rv_21d: "rv_21d (21-day Realized Vol)",
+  rv_63d: "rv_63d (63-day Realized Vol)",
+  vol_ratio_5_21: "vol_ratio_5_21 (Short/Medium Vol Ratio)",
+  vol_ratio_21_63: "vol_ratio_21_63 (Medium/Long Vol Ratio)",
+  gk_vol_21: "gk_vol_21 (Garman-Klass Vol)",
+  park_vol_21: "park_vol_21 (Parkinson Vol)",
+  mom_5d: "mom_5d (1-Week Momentum)",
+  mom_10d: "mom_10d (2-Week Momentum)",
+  mom_21d: "mom_21d (1-Month Momentum)",
+  mom_63d: "mom_63d (3-Month Momentum)",
+  rsi_14: "rsi_14 (14-day RSI)",
+  vol_ma_ratio: "vol_ma_ratio (Volume vs 21-day Avg)",
+  drawdown: "drawdown (Drawdown from Peak)",
+};
+
+const fmt = (v: number | null | undefined, d = 3) =>
+  v == null || Number.isNaN(v) ? "n/a" : v.toFixed(d);
 
 export default function Home() {
   const [summary, setSummary] = useState<MarketSummary>(DEFAULT_SUMMARY);
@@ -138,7 +163,7 @@ export default function Home() {
           fetchData(attempt + 1, maxAttempts);
         }, 4000);
       } else {
-        setError("Backend API is currently offline. Showing cached benchmark telemetry.");
+        setError("Backend API is currently offline. No data to show.");
         setLastRefreshed(new Date().toLocaleTimeString());
         setLoading(false);
       }
@@ -150,12 +175,16 @@ export default function Home() {
   }, []);
 
   const getRegimeColor = (name: string) => {
+    if (name === "n/a") return "text-slate-400 border-slate-600/30 bg-slate-500/10";
     if (name.includes("Low")) return "text-emerald-400 border-emerald-500/30 bg-emerald-500/10";
     if (name.includes("Mid")) return "text-amber-400 border-amber-500/30 bg-amber-500/10";
     return "text-rose-400 border-rose-500/30 bg-rose-500/10";
   };
 
   const getRegimeBadge = (name: string) => {
+    if (name === "n/a") {
+      return <span className="text-xs text-slate-500">No data</span>;
+    }
     if (name.includes("Low")) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
@@ -257,8 +286,8 @@ export default function Home() {
                 Predictive Volatility Regime Intelligence
               </h1>
               <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-                Retrospective HMM classification identifies market states. An XGBoost walk-forward CV ensemble
-                predicts next-day regimes, preventing capital drawdowns with a 1-day execution lag.
+                HMM regimes are fitted on the full sample, so the labels use later data. XGBoost is a diagnostic
+                next-day forecast. The backtest holds the regime rule with a 1-day signal lag and compares it with buy-and-hold.
               </p>
             </div>
 
@@ -266,14 +295,14 @@ export default function Home() {
               <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800/80 min-w-[140px]">
                 <div className="text-xs text-slate-400">Nifty 50 Close</div>
                 <div className="text-xl font-bold text-white tracking-tight">
-                  ₹{summary.nifty_close.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  {summary.nifty_close ? "\u20b9" + summary.nifty_close.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "n/a"}
                 </div>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800/80 min-w-[140px]">
                 <div className="text-xs text-slate-400">OOF Macro-AUC</div>
-                <div className="text-xl font-bold text-emerald-400 tracking-tight flex items-center gap-1">
-                  <span>{(summary.model_auc * 100).toFixed(1)}%</span>
-                  <span className="text-[10px] text-slate-400 font-normal">(Target &gt;70%)</span>
+                <div className="text-xl font-bold text-white tracking-tight flex items-center gap-1">
+                  <span>{fmt(summary.model_auc)}</span>
+                  <span className="text-[10px] text-slate-400 font-normal">(persistence baseline {fmt(summary.persistence_baseline_auc)})</span>
                 </div>
               </div>
             </div>
@@ -308,13 +337,13 @@ export default function Home() {
                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-blue-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(summary.garch_vol_current * 3, 100)}%` }}
+                    style={{ width: `${Math.min((summary.garch_vol_current / 30) * 100, 100)}%` }}
                   ></div>
                 </div>
                 <div className="flex justify-between text-[10px] text-slate-500">
-                  <span>0% (Calm)</span>
-                  <span>15% (Normal)</span>
-                  <span>30%+ (Stress)</span>
+                  <span>0%</span>
+                  <span>15%</span>
+                  <span>30%+</span>
                 </div>
               </div>
             </div>
@@ -382,33 +411,38 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                   <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" />
-                  Strategy Alpha & Protection
+                  Strategy vs Buy &amp; Hold
                 </span>
                 <span className="text-xs text-slate-500">2014 – 2026</span>
               </div>
 
               <div>
                 <div className="text-2xl font-black tracking-tight text-white mb-1 flex items-center gap-2">
-                  <span>Sharpe {summary.backtest_sharpe.toFixed(3)}</span>
-                  <span className="text-xs px-2 py-0.5 rounded font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                    vs 0.884 B&amp;H
+                  <span>Sharpe {fmt(summary.backtest_sharpe)}</span>
+                  <span className="text-xs px-2 py-0.5 rounded font-bold bg-slate-500/10 text-slate-300 border border-slate-500/30">
+                    vs {fmt(summary.backtest_sharpe_bh)} B&amp;H
                   </span>
                 </div>
-                <p className="text-xs text-slate-400">Risk-free hurdle = 6.50% (India 10Y G-Sec)</p>
+                <p className="text-xs text-slate-400">Risk-free rate = 6.50% constant (India 10Y G-Sec proxy)</p>
               </div>
 
               <div className="pt-2 border-t border-slate-800/60 space-y-2 text-xs">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Strategy Max Drawdown:</span>
-                  <span className="font-mono font-bold text-emerald-400">{(summary.backtest_max_dd * 100).toFixed(1)}%</span>
+                  <span className="font-mono font-bold text-slate-200">{summary.backtest_max_dd == null ? "n/a" : (summary.backtest_max_dd * 100).toFixed(1) + "%"}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Buy &amp; Hold Max Drawdown:</span>
-                  <span className="font-mono font-bold text-rose-400">-38.4%</span>
+                  <span className="font-mono font-bold text-slate-200">{summary.backtest_max_dd_bh == null ? "n/a" : (summary.backtest_max_dd_bh * 100).toFixed(1) + "%"}</span>
                 </div>
-                <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-medium flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                  <span>+15.1% Capital Protection during market drawdowns</span>
+                <div className="p-2 rounded-lg bg-slate-500/10 border border-slate-500/20 text-slate-300 text-[11px] font-medium flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <span>
+                    Max drawdown difference vs buy-and-hold (positive = smaller drawdown):{" "}
+                    {summary.backtest_max_dd == null || summary.backtest_max_dd_bh == null
+                      ? "n/a"
+                      : ((summary.backtest_max_dd - summary.backtest_max_dd_bh) * 100).toFixed(1) + " pts"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -426,23 +460,26 @@ export default function Home() {
                   SHAP Feature Attribution (TreeExplainer)
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Exact Shapley values explaining which features drive tomorrow's regime prediction.
+                  Mean |SHAP| over the last 500 rows, from the last walk-forward fold model. It shows what the model uses, not that it forecasts well.
                 </p>
               </div>
-              <span className="text-xs text-slate-500 font-mono">15 Features</span>
+              <span className="text-xs text-slate-500 font-mono">Top {summary.top_shap.length} of 15</span>
             </div>
 
             <div className="space-y-3 pt-2">
-              {TOP_SHAP_FEATURES.map((item, idx) => (
+              {summary.top_shap.length === 0 && (
+                <div className="text-xs text-slate-500">SHAP values unavailable (run scripts/regime_classifier.py).</div>
+              )}
+              {summary.top_shap.map((item, idx) => (
                 <div key={idx} className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-300 font-medium">{item.name}</span>
-                    <span className="text-slate-400 font-mono">{item.value.toFixed(3)}</span>
+                    <span className="text-slate-300 font-medium">{FEATURE_LABELS[item.feature] || item.feature}</span>
+                    <span className="text-slate-400 font-mono">{item.mean_abs_shap.toFixed(3)}</span>
                   </div>
                   <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-blue-600 to-cyan-400 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${item.pct}%` }}
+                      style={{ width: `${(item.mean_abs_shap / (summary.top_shap[0]?.mean_abs_shap || 1)) * 100}%` }}
                     ></div>
                   </div>
                 </div>
@@ -526,10 +563,10 @@ export default function Home() {
             <span>Methodology &amp; Anti-Leakage Protocol</span>
           </div>
           <p className="leading-relaxed">
-            The platform addresses time-series leakage through a strict 5-day gap walk-forward cross-validation
-            schedule (<code className="text-blue-300">TimeSeriesSplit(n_splits=5, gap=5)</code>). The 5-day gap prevents
-            autoregressive correlation from GARCH(1,1) volatility persistence from leaking into test folds. Backtested
-            signals incorporate a 1-day execution lag to simulate real institutional trade settlement.
+            Walk-forward cross-validation uses <code className="text-blue-300">TimeSeriesSplit(n_splits=5, gap=5)</code>.
+            The gap only partly covers the 21- and 63-day features. Backtest signals are shifted one day. Regime labels
+            come from an HMM fitted on the full sample, so they use later data. The XGBoost layer is a diagnostic: its
+            out-of-fold AUC is below a &quot;tomorrow = today&quot; baseline.
           </p>
         </div>
       </main>

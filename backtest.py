@@ -35,6 +35,7 @@ OUTPUTS_DIR = Path("outputs")
 INIT_CASH = 100_000
 FEES = 0.001      # 0.1 % per trade
 SLIPPAGE = 0.001
+RISK_FREE = 0.065  # annual, India 10Y G-Sec proxy
 
 
 def run_backtest(
@@ -62,8 +63,12 @@ def run_backtest(
     OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
     price = df["Close"]
-    entries = df["regime"] == 0  # enter on Low Vol
-    exits = df["regime"] == 2    # exit on High Vol
+    # Signal known at close t -> trade at close t+1 (real 1-day lag)
+    entries = (df["regime"] == 0).shift(1, fill_value=False)
+    exits = (df["regime"] == 2).shift(1, fill_value=False)
+    # Sessions per year actually in the data (vectorbt would assume 365)
+    years = (df.index[-1] - df.index[0]).days / 365.25
+    ppy = len(df) / years
 
     pf = vbt.Portfolio.from_signals(
         close=price,
@@ -78,7 +83,7 @@ def run_backtest(
     bh = vbt.Portfolio.from_holding(price, init_cash=INIT_CASH, freq="D")
 
     summary = pd.DataFrame(
-        {"Strategy": _collect_metrics(pf), "Buy & Hold": _collect_metrics(bh)}
+        {"Strategy": _collect_metrics(pf, ppy), "Buy & Hold": _collect_metrics(bh, ppy)}
     ).T
 
     logger.info("\n── Backtest Results ──\n%s", summary.to_string())
@@ -87,15 +92,15 @@ def run_backtest(
     return summary, pf
 
 
-def _collect_metrics(pf: "vbt.Portfolio") -> dict:
+def _collect_metrics(pf: "vbt.Portfolio", ppy: float) -> dict:
     """Extract key performance metrics from a vectorbt Portfolio."""
     has_trades = len(pf.trades.records) > 0
     return {
         "Total Return (%)": round(pf.total_return() * 100, 2),
-        "CAGR (%)": round(pf.annualized_return() * 100, 2),
-        "Sharpe Ratio": round(pf.sharpe_ratio(), 3),
+        "CAGR (%)": round(pf.annualized_return(year_freq=f"{ppy:.4f} days") * 100, 2),
+        "Sharpe Ratio": round(pf.sharpe_ratio(risk_free=RISK_FREE / ppy, year_freq=f"{ppy:.4f} days"), 3),
         "Max Drawdown (%)": round(pf.max_drawdown() * 100, 2),
-        "Calmar Ratio": round(pf.calmar_ratio(), 3),
+        "Calmar Ratio": round(pf.calmar_ratio(year_freq=f"{ppy:.4f} days"), 3),
         "Win Rate (%)": round(pf.trades.win_rate() * 100, 2) if has_trades else float("nan"),
         "Num Trades": len(pf.trades.records),
     }

@@ -1,31 +1,32 @@
 # Core data
-yfinance>=0.2.36
-pandas>=2.0
-numpy>=1.26
+yfinance>=1.2.0
+pandas>=3.0.5
+numpy>=2.5.3
 
 # Modelling
-arch>=6.3
-hmmlearn>=0.3
-scikit-learn>=1.4
-shap>=0.45
-xgboost>=2.0
+arch>=8.0.0
+hmmlearn>=0.3.3
+scikit-learn>=1.9.0
+shap>=0.52.0
+xgboost>=3.3.0
+statsmodels>=0.14.0
 
 # Experiment tracking
-mlflow>=2.12
+mlflow>=3.18.0
 
 # Backtesting
-vectorbt>=0.26
+vectorbt>=1.1.0
 
 # Visualisation
-matplotlib>=3.8
-plotly>=5.20,<6.0.0
+matplotlib>=3.10.8
+plotly>=6.6.0
 
 # Dashboard / API
-streamlit>=1.33
-fastapi>=0.111
-uvicorn[standard]>=0.29
-pydantic>=2.6
+streamlit>=1.63.0
+fastapi>=0.141.1
+uvicorn[standard]>=0.32.1
+pydantic>=2.13.4
 
 # Testing
-pytest>=8.0
-httpx>=0.27
+pytest>=8.3.3
+httpx>=0.27.2

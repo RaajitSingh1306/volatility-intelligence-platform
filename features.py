@@ -83,7 +83,7 @@ def parkinson_vol(df: pd.DataFrame, window: int = 21) -> pd.Series:
 
 
 def _rsi(series: pd.Series, period: int = 14) -> pd.Series:
-    """Wilder's RSI."""
+    """RSI using simple rolling means of gains and losses (not Wilder smoothing)."""
     delta = series.diff()
     gain = delta.clip(lower=0).rolling(period).mean()
     loss = (-delta.clip(upper=0)).rolling(period).mean()

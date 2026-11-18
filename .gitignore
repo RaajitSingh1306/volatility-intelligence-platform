@@ -61,4 +61,14 @@ models/*.pkl
 # Frontend
 frontend/node_modules/
 frontend/.next/
-frontend/out/
+frontend/out/
+
+
+# added by patch_b9c
+*.pyc
+node_modules/
+.next/
+frontend/.env.local
+patch_*.py
+b8*.py
+!research/*.ipynb

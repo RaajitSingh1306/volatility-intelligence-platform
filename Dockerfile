@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run base pipeline to create labeled data and train XGBoost classifier
-RUN python run.py && python scripts/regime_classifier.py
+RUN python run.py && python scripts/regime_classifier.py --n_estimators 200
 
 EXPOSE 8000
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
