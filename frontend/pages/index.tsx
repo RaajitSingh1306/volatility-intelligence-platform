@@ -147,8 +147,8 @@ export default function Home() {
         }),
       ]);
 
-      setSummary(sumRes);
-      setPredict(predRes);
+      setSummary({ ...DEFAULT_SUMMARY, ...sumRes });
+      setPredict({ ...DEFAULT_PREDICT, ...predRes });
       setHistory(histRes);
       setError(null);
       setLastRefreshed(new Date().toLocaleTimeString());
