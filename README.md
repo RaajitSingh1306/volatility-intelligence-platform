@@ -3,24 +3,25 @@
 > [!NOTE]
 > **FINAL SHIPPED PRODUCTION PLATFORM**  
 > This system is the **final, shipped production version** of the Volatility Regime classification platform. It officially **supersedes** both earlier developmental iterations:
+>
 > - **[Volatility Regime Classifier (v1 Prototype)](https://github.com/RaajitSingh1306/Volatility-Regime-Classifier)** (dual-asset prototype)
 > - **[Volatility Classifier Simplified (v2 Refactor)](https://github.com/RaajitSingh1306/volatility-classifier-simplified)** (single-asset modular refactor)
 
 [![Status: Production Flagship](https://img.shields.io/badge/Status-PRODUCTION%20FLAGSHIP-emerald)](#evolution--supersession-lineage)
 [![CI Tests](https://img.shields.io/badge/tests-24%2F24%20passed-brightgreen)](#8-results--evaluation)
-[![OOF Macro-AUC](https://img.shields.io/badge/OOF%20Macro--AUC-0.6515-orange)](#8-results--evaluation)
+[![OOF Macro-AUC](https://img.shields.io/badge/OOF%20Macro--AUC-platform%20dependent-orange)](#8-results--evaluation)
 [![Sharpe Ratio](https://img.shields.io/badge/Sharpe-0.269%20vs%200.305%20B%26H-orange)](#8-results--evaluation)
 [![Docker](https://img.shields.io/badge/Docker-Dockerfile%20included-lightgrey)](#12-deployment)
 [![Deploy on Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7)](#12-deployment)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#16-license--disclaimer)
 
 | Resource | URL |
-|---|---|
+| --- | --- |
 | **Web Dashboard** | [https://volatility-intelligence-platform.vercel.app](https://volatility-intelligence-platform.vercel.app) |
 | **REST API** | [https://volatility-intelligence-platform.onrender.com](https://volatility-intelligence-platform.onrender.com) |
 | **Interactive API Docs** | [https://volatility-intelligence-platform.onrender.com/docs](https://volatility-intelligence-platform.onrender.com/docs) |
 
-A quantitative research platform that classifies and backtests **Nifty 50 (`^NSEI`)** volatility regimes: **GARCH(1,1)** conditional volatility, a **3-state Gaussian HMM** for regime labels, a **5-fold walk-forward XGBoost ensemble** that predicts the next-day label (pooled OOF Macro-AUC 0.6515 on 51 Mid/High days; a "tomorrow = today" baseline scores 0.9455), **TreeSHAP** attributions, **MLflow** tracking and a **vectorbt** backtest (1-day lag, 0.1% fees, 0.1% slippage), served via **FastAPI** and a **Next.js 14** console.
+A quantitative research platform that classifies and backtests **Nifty 50 (`^NSEI`)** volatility regimes: **GARCH(1,1)** conditional volatility, a **3-state Gaussian HMM** for regime labels, a **5-fold walk-forward XGBoost ensemble** that predicts the next-day label (pooled OOF Macro-AUC 0.6515 on Windows and 0.699 on Linux, on 51 Mid/High validation days; the "tomorrow = today" baseline scores 0.9455), **TreeSHAP attributions** for the XGBoost classifier, **MLflow** tracking and a **vectorbt** backtest (1-day lag, 0.1% fees, 0.1% slippage), served via **FastAPI** and a **Next.js 14** console.
 
 ---
 
@@ -29,7 +30,7 @@ A quantitative research platform that classifies and backtests **Nifty 50 (`^NSE
 This platform represents the culmination of three developmental generations:
 
 | Dimension | v1: Volatility Classifier (Prototype) | v2: Volatility Classifier Simplified | v3: Volatility Intelligence Platform (This System) |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **Scope** | Nifty 50 + Bank Nifty | Nifty 50 single-asset | **Nifty 50 full production platform** |
 | **Features** | 3 engineered volatility features | 15 volatility & momentum features | **15 standardized econometric & technical features** |
 | **Model Architecture** | Gaussian HMM + GARCH(1,1) | Gaussian HMM + GARCH(1,1) | **HMM state clustering + 5-fold XGBoost forward predictive ensemble** |
@@ -81,7 +82,7 @@ The Volatility Intelligence Platform operates on daily Nifty 50 market data to p
 ### Regime Definitions & Systematic Actions
 
 | Regime | Label | Market Environment | Characteristic Behavior | Strategy Position |
-|---|:---:|---|---|:---:|
+| --- | :---: | --- | --- | :---: |
 | **Low Vol** | `0` | Normal conditions: 97.3% of days (2,971), includes stress up to ~48% GARCH vol | Default state | **Enter / stay long** |
 | **Mid Vol** | `1` | Short episodes: 57 days in 7 runs, longest 28 days | Scattered, no single market story | **Hold current position** |
 | **High Vol** | `2` | One episode: 2020-03-13 to 2020-04-24 (27 days, 0.9%) | COVID crash | **Exit to cash** |
@@ -172,13 +173,13 @@ Source: `results/results.json`. The HMM mainly isolates the COVID crash; it does
 ## 4. Tech Stack & Libraries
 
 | Library / Tool | Version | Purpose | Rationale |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **Python** | `3.12` (reported run: 3.12.10) | Core programming runtime | Modern high-performance scientific programming |
 | **XGBoost** | `3.3.0` | Forward regime classification | Gradient boosted decision trees for forward-looking $P(z_{T+1} \mid x_T)$ predictions |
 | **hmmlearn** | `0.3.3` | Unsupervised regime discovery | Gaussian Hidden Markov Models with full covariance for multivariate state discovery |
 | **arch** | `8.0.0` | Econometric volatility modeling | Industry-standard conditional heteroskedasticity GARCH(1,1) estimation |
 | **scikit-learn** | `1.9.0` | Preprocessing & validation | `StandardScaler`, `TimeSeriesSplit(gap=5)`, and multi-class ROC-AUC metrics |
-| **SHAP** | `0.52.0` | Model explainability | `TreeExplainer` providing exact polynomial-time Shapley attributions |
+| **SHAP** | `0.52.0` (recorded run) | Model explainability | `TreeExplainer` for the XGBoost classifier; `PermutationExplainer` on a Gradient Boosting surrogate for HMM-label interpretation |
 | **MLflow** | `3.15.1` | Experiment tracking | SQLite-backed registry tracking hyperparameters, fold AUCs, and model artifacts |
 | **vectorbt** | `1.1.0` | Vectorized backtesting | Signal-based simulation with 0.1% fees, 0.1% slippage and a 1-day signal lag |
 | **FastAPI** | `0.141.1` | Production REST API | Asynchronous endpoints with Pydantic validation and in-memory `@lru_cache` |
@@ -194,11 +195,11 @@ Source: `results/results.json`. The HMM mainly isolates the COVID crash; it does
 - **Asset**: Nifty 50 Index (`^NSEI`).
 - **Source**: Yahoo Finance API via `yfinance`.
 - **Sample Horizon**: 2014-01-01 to 2026-09-12 requested; the reported run has 3,055 rows (2014-04-07 to 2026-09-11) after feature warm-up. Spans 2015-16 EM selloff, 2018 NBFC crisis, March 2020 COVID shock, and 2021-2024 expansion.
-- **Cache**: `data/nifty_ohlcv.csv` with a **7-day TTL** for rapid startup.
+- **Cache**: `data/nifty_ohlcv.csv` with a **7-day TTL**. When `cache=True`, `data.py` loads any cache younger than 7 days without checking whether its dates match the requested `start`/`end`; a direct call can therefore return a different date range than requested. The recorded pipeline in `run.py` passes `cache=False` and explicitly requests 2014-01-01 through 2026-09-12 (`end` is exclusive).
 - **15 Quantitative Features**:
 
 | Category | Features | Formulation / Description |
-|---|---|---|
+| --- | --- | --- |
 | **Realized Volatility (4)** | `rv_5d`, `rv_10d`, `rv_21d`, `rv_63d` | Rolling standard deviation of continuous log returns scaled by $\sqrt{252}$ |
 | **Vol-of-Vol Ratios (2)** | `vol_ratio_5_21`, `vol_ratio_21_63` | Short-term to medium/long-term volatility ratios ($>1.0$ indicates acceleration) |
 | **OHLC Estimators (2)** | `park_vol_21`, `gk_vol_21` | Parkinson ($\sim 2.5\times$ efficiency) and Garman-Klass ($\sim 5\times$ efficiency over close-to-close) |
@@ -228,7 +229,7 @@ Source: `results/results.json`. The HMM mainly isolates the COVID crash; it does
 ## 7. Problems Faced & How We Solved Them
 
 | Problem | Impact | How We Got Around It |
-|---|---|---|
+| --- | --- | --- |
 | **Walk-forward CV data leakage from rolling indicators** | 5-day rolling features (`rv_5d`, `mom_5d`) and GARCH variance memory can leak information across train/validation boundaries | Used `TimeSeriesSplit(n_splits=5, gap=5)` so a 5-day gap separates training and validation windows. Longer windows (`rv_63d`, `mom_63d`) are only partly covered by this gap. |
 | **Early stopping on the validation fold** | Early stopping that watches the validation fold picks the stopping point on the data it is then scored on, which inflates AUC | Early stopping now uses the last 15% of each training window; the validation fold is used only for scoring |
 | **GARCH numerical conditioning failure** | Raw daily returns (~0.001) produced variances near machine epsilon, causing Maximum Likelihood Optimization (MLE) gradients to fail to converge | Scaled returns by **$\times 100$ before GARCH estimation** (`returns * 100`), keeping gradient norms well above machine epsilon. Rescaled fitted conditional variance back to annualized percentage volatility |
@@ -247,7 +248,7 @@ Source: `results/results.json`. The HMM mainly isolates the COVID crash; it does
 Source: `results/metrics.json`. Each validation fold has 509 rows. Fold AUC is the macro average over the classes present in that fold.
 
 | Fold | Fit / early-stop rows | Validation window | Val days Low / Mid / High | Macro-AUC |
-|:---:|:---:|---|:---:|:---:|
+| :---: | :---: | --- | :---: | :---: |
 | 1 | 423 / 76 | 2016-05-17 to 2018-06-06 | 509 / 0 / 0 | undefined (0.5 placeholder) |
 | 2 | 856 / 152 | 2018-06-07 to 2020-07-09 | 474 / 8 / 27 | 0.9061 |
 | 3 | 1,288 / 229 | 2020-07-10 to 2022-07-25 | 505 / 4 / 0 | 0.9460 |
@@ -266,7 +267,7 @@ Source: `results/metrics.json`. Each validation fold has 509 rows. Fold AUC is t
 Source: `results/results.json` (3,055 sessions, one pinned run).
 
 | Metric | Regime strategy | Nifty 50 Buy & Hold | Difference |
-|---|:---:|:---:|:---:|
+| --- | :---: | :---: | :---: |
 | Sharpe (Rf 6.5%, 246 sessions/yr) | 0.269 | 0.305 | -0.036 |
 | Max drawdown | -33.69% | -38.44% | +4.75 pts |
 | Total return | +219.23% | +249.48% | -30.25 pts |
@@ -411,7 +412,7 @@ npm run dev
 ### Endpoints
 
 | Method | Endpoint | Description | Sample Output |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `GET` | `/` | Health check | `{"status": "ok", "message": "Volatility Intelligence Platform API v2.0"}` |
 | `GET` | `/current` | Latest regime, GARCH vol, close | fields: `date`, `regime`, `regime_name`, `garch_vol_pct`, `close` |
 | `GET` | `/predict` | XGBoost ensemble probabilities for the next day | fields: `predicted_regime`, `predicted_regime_name`, `prob_low`, `prob_mid`, `prob_high`, `model_auc` |
@@ -427,13 +428,15 @@ npm run dev
 ### Render Backend Deployment
 
 The platform is deployed as a Docker Web Service on Render using `render.yaml`:
-- Build: `docker build` runs `run.py` and `scripts/regime_classifier.py --n_estimators 200`, so trained models are baked into the image. Not verified by me; CI runs the same two commands.
+
+- Build: `docker build` runs `run.py` and `scripts/regime_classifier.py --n_estimators 200`, so trained models are baked into the image. Verified by the Render build log on 2026-11-18. GitHub Actions runs those Python commands directly; it does not build the Docker image.
 - Startup: `uvicorn app.main:app`; data and models load on the first request, then stay cached in memory with `@lru_cache`.
-- **Deploys are manual**: a push to GitHub does not redeploy Render for this service. After each push, open the Render dashboard and run Manual Deploy > Deploy latest commit (the Docker build trains the models, so it takes a few minutes). Vercel redeploys on every push, so deploy Render too, or the frontend will talk to an older API.
+- **Deployment check**: Render Auto-Deploy is enabled, but it did not trigger for one observed push. After every push, verify that a new Render deploy has started and completed; if not, open the Render dashboard and run Manual Deploy > Deploy latest commit. Vercel redeploys on every push, so verify both services are on the intended commit to avoid a frontend/API version mismatch.
 
 ### Vercel Frontend Deployment
 
 The Next.js frontend is deployed on Vercel:
+
 - Configured with `NEXT_PUBLIC_API_URL=https://volatility-intelligence-platform.onrender.com`.
 - Includes automatic cold-start retry handling for backend spinning instances.
 
@@ -475,7 +478,9 @@ The Next.js frontend is deployed on Vercel:
 ## 16. License & Disclaimer
 
 ### License
+
 This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
 
 ### Disclaimer
+
 This software is intended strictly for quantitative finance research, algorithmic modeling education, and portfolio analytics. It does not constitute investment advice or trading recommendations.
